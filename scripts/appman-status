@@ -20,23 +20,30 @@ fi
 merge_state "$(jq -nc '{checking: true, error: ""}')"
 
 raw="$("$APPMAN" -f --byname 2>/dev/null || true)"
-# Strip ANSI colors, then keep only the "◆ name | db | version | type | size" rows.
-rows="$(printf '%s\n' "$raw" | sed 's/\x1b\[[0-9;]*m//g' | grep '^ ◆ ' || true)"
+# Strip ANSI colors. The table layout varies between AppMan releases
+# (older: APPNAME | DB | VERSION | TYPE | SIZE, newer: no DB column),
+# so map row fields by the header instead of fixed positions.
+clean="$(printf '%s\n' "$raw" | sed 's/\x1b\[[0-9;]*m//g')"
+header="$(printf '%s\n' "$clean" | grep -m1 '^ - APPNAME' || true)"
+rows="$(printf '%s\n' "$clean" | grep '^ ◆ ' || true)"
 
 apps="[]"
 if [[ -n $rows ]]; then
-  tsv="$(printf '%s\n' "$rows" | awk -F'|' '{
-    for (i = 1; i <= 5; i++) { gsub(/^ +| +$/, "", $i) }
-    sub(/^◆ +/, "", $1)
-    # Guard against malformed rows.
-    if ($1 != "") print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5
-  }')"
-  if [[ -n $tsv ]]; then
-    apps="$(printf '%s\n' "$tsv" | jq -c -R -s '
-      split("\n")
-      | map(select(length > 0) | split("\t")
-        | {name: (.[0] // ""), db: (.[1] // ""), version: (.[2] // ""), type: (.[3] // ""), size: (.[4] // "")})')"
-  fi
+  apps="$(jq -nc --arg header "$header" --arg rows "$rows" '
+    ($header | split("|") | map(ascii_downcase | sub("^ *- *"; "") | gsub("^ +| +$"; ""))) as $cols
+    | ($cols | index("appname")) as $ci
+    | ($cols | index("db")) as $di
+    | ($cols | index("version")) as $vi
+    | ($cols | index("type")) as $ti
+    | ($cols | index("size")) as $si
+    | ($rows | split("\n") | map(select(length > 0)))
+    | map(split("|") | map(gsub("^ +| +$"; "")) | . as $f
+      | {name: ((if $ci == null then $f[0] else $f[$ci] end) | sub("^◆ +"; "")),
+         db: (if $di == null then "" else ($f[$di] // "") end),
+         version: (if $vi == null then "" else ($f[$vi] // "") end),
+         type: (if $ti == null then "" else ($f[$ti] // "") end),
+         size: (if $si == null then "" else ($f[$si] // "") end)}
+      | select(.name != ""))')"
 fi
 
 state="$(jq -nc --argjson checkedAt "$(now_unix)" --argjson apps "$apps" '{
