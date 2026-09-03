@@ -1,43 +1,43 @@
 # AppMan
 
-Bar widget for Omarchy Quattro that lists your [AppMan](https://github.com/ivan-hc/AM)
-apps, updates them in one click, and integrates a local `.AppImage` via
-file picker or drag-drop — without leaving the desktop.
-
-AppMan has no cheap "check for updates" command (`appman -u` runs the
-updaters for real), so this widget lists what is installed and lets you
-update on demand, instead of pretending to know what is outdated.
-
-## Install
+AppMan apps in the Omarchy Quattro bar: see what's installed, update it all
+in one click, install a local `.AppImage` via file picker or drag-drop, and
+remove apps per row.
 
 ```sh
-git clone <this-repo> ~/Projects/omarchy-appman
-ln -s ~/Projects/omarchy-appman ~/.config/omarchy/plugins/fruffel.appman
+omarchy plugin add https://github.com/Fruffel/omarchy-appman.git --enable
 ~/.config/omarchy/plugins/fruffel.appman/scripts/setup
 ```
 
+The setup script installs the post-boot hook (quiet background upgrade) and
+places the widget. Without it the widget still works, but nothing upgrades
+at boot.
+
 ## Usage
 
-- The package icon stays in the bar with your installed-app count.
-- Left click opens the panel. **Update all** runs the upgrade in a floating terminal.
-- Middle click upgrades immediately.
-- Right click refreshes the installed list.
-- A post-boot hook upgrades apps quietly after the desktop starts and only
-  notifies when something actually changed.
+- Left click opens the panel, Escape closes it.
+- Middle click upgrades immediately, right click refreshes the list.
+- **Update all** upgrades everything (`appman -u`, including AppMan's own
+  self-sync) in a floating terminal.
+- **Install**: type a path, hit **Browse…**, or drop an `.AppImage` onto the
+  section. It runs `appman --launcher` on the file, which registers it in
+  the app menu.
+- **Remove** next to an app uninstalls it without asking (`appman -R`).
 
-### Installing apps
+## Dependencies
 
-From the panel: type a path, hit **Browse…**, or drag-drop an `.AppImage`
-onto the install section. It runs `appman --launcher` on the file.
+- [AppMan](https://github.com/ivan-hc/AM) (`appman`) on `PATH`.
+- `jq` for status bookkeeping.
+- `curl` for the `appman-install-url` helper script.
+- `omarchy-launch-floating-terminal-with-presentation` and
+  `omarchy-notification-send` (ship with Omarchy, `notify-send` fallback).
 
-The other flows live in `scripts/` for the terminal:
+## Privileges
 
-```sh
-scripts/appman-install-db firefox
-scripts/appman-install-extra Selene-Apps/file-analyzer file-analyzer
-scripts/appman-install-file ~/Downloads/app.AppImage
-scripts/appman-install-url https://example.com/app.AppImage [appname]
-```
+Everything runs as your user. No sudo is used or needed: AppMan installs
+into `~/Applications` and the plugin state lives under
+`~/.local/state/omarchy/appman.json`. The only persistent system touch is
+the post-boot hook copy at `~/.config/omarchy/hooks/post-boot.d/appman-update`.
 
 ## Configure
 
@@ -54,14 +54,36 @@ omarchy bar set fruffel.appman pollMinutes 60
 omarchy bar move fruffel.appman --section center --after fruffel.brew-update
 ```
 
+Note: AppMan has no dry-run outdated check — `appman -u` runs the updaters
+for real — so the widget shows the installed count, not a pending-update
+count. The poll only re-reads the local list.
+
+## Helper scripts
+
+The panel covers install-from-file and remove. The rest is in `scripts/`
+for terminal use:
+
+```sh
+scripts/appman-install-db firefox
+scripts/appman-install-extra Selene-Apps/file-analyzer file-analyzer [keyword]
+scripts/appman-install-file ~/Downloads/app.AppImage
+scripts/appman-install-url https://example.com/app.AppImage [appname]
+scripts/appman-upgrade [--quiet] [--notify]
+```
+
+## Update
+
+```sh
+omarchy plugin update fruffel.appman
+```
+
 ## Remove
 
 ```sh
-omarchy plugin disable fruffel.appman
+omarchy plugin remove fruffel.appman --yes
 rm -f ~/.config/omarchy/hooks/post-boot.d/appman-update
 ```
 
-## Companion
+## License
 
-Pairs with `fruffel.brew-update` (Homebrew from the bar) using the same
-widget/hook conventions.
+[MIT](LICENSE)
