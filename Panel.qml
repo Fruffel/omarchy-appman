@@ -19,6 +19,8 @@ Panel {
   property bool startupHandled: false
   property string pendingRemove: ""
   property string pendingInstall: ""
+  property int spinFrame: 0
+  readonly property var spinFrames: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
   readonly property int count: Model.appCount(status)
   readonly property bool checking: status.checking === true || statusProc.running
@@ -191,6 +193,15 @@ Panel {
     }
   }
 
+  // Braille spinner frames while an upgrade runs.
+  Timer {
+    id: spinTimer
+    interval: 80
+    running: root.updating
+    repeat: true
+    onTriggered: root.spinFrame = (root.spinFrame + 1) % root.spinFrames.length
+  }
+
   // Let the session settle before the first appman process.
   Timer {
     id: startupTimer
@@ -298,13 +309,13 @@ Panel {
             spacing: Style.space(8)
 
             Button {
-              text: "Update all"
-              iconText: Model.icon()
-              iconSpinning: root.updating
+              text: root.updating ? "Updating" : "Update all"
+              iconText: root.updating ? root.spinFrames[root.spinFrame] : Model.icon()
               foreground: root.contentForeground
               fontFamily: root.contentFontFamily
               bordered: true
               enabled: root.count > 0 && !root.busy
+              opacity: root.busy ? 0.45 : 1
               onClicked: root.runUpgrade()
             }
           }
@@ -352,6 +363,7 @@ Panel {
                   fontFamily: root.contentFontFamily
                   bordered: true
                   enabled: fileField.text.trim() !== "" && !root.busy
+                  opacity: root.busy ? 0.45 : 1
                   onClicked: root.integrateFile()
                 }
               }
@@ -435,6 +447,7 @@ Panel {
             fontFamily: root.contentFontFamily
             bordered: true
             enabled: !root.busy
+            opacity: root.busy ? 0.45 : 1
             onClicked: {
               if (appRow.armed) {
                 appRow.armed = false
