@@ -17,7 +17,7 @@ Panel {
 
   property var status: Model.emptyStatus()
   property bool startupHandled: false
-  property bool showInstalled: true
+  property bool showInstalled: false
   property string pendingRemove: ""
   property string pendingInstall: ""
   property int spinFrame: 0
