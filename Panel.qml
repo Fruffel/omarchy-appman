@@ -256,6 +256,7 @@ Panel {
             Button {
               text: "Update all"
               iconText: Model.icon()
+              iconSpinning: root.updating
               foreground: root.contentForeground
               fontFamily: root.contentFontFamily
               bordered: true
@@ -343,9 +344,18 @@ Panel {
       model: packages
 
       delegate: Item {
+        id: appRow
         required property var modelData
+        property bool armed: false
         width: parent ? parent.width : 0
         implicitHeight: row.implicitHeight
+
+        Timer {
+          id: disarmTimer
+          interval: 3000
+          repeat: false
+          onTriggered: parent.armed = false
+        }
 
         Row {
           id: row
@@ -376,12 +386,20 @@ Panel {
 
           Button {
             id: removeButton
-            text: "Remove"
-            foreground: root.contentForeground
+            text: appRow.armed ? "Sure?" : "Remove"
+            foreground: appRow.armed ? root.contentUrgent : root.contentForeground
             fontFamily: root.contentFontFamily
             bordered: true
             enabled: !root.updating
-            onClicked: root.removeApp(modelData.name)
+            onClicked: {
+              if (appRow.armed) {
+                appRow.armed = false
+                root.removeApp(modelData.name)
+              } else {
+                appRow.armed = true
+                disarmTimer.restart()
+              }
+            }
           }
         }
       }
