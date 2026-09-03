@@ -89,7 +89,7 @@ Panel {
   function removeApp(name) {
     var n = String(name || "").trim()
     if (n === "") return
-    runInTerminal(["appman", "-r", n])
+    runInTerminal(["appman", "-R", n])
   }
 
   function handleStartup() {
