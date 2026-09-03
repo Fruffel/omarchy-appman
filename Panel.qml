@@ -264,7 +264,7 @@ Panel {
           PanelHero {
             width: parent.width
             title: "AppMan"
-            meta: root.checking ? "Checking…" : (root.updating ? "Updating…" : Model.formatCheckedAt(root.status.checkedAt))
+            meta: Model.formatCheckedAt(root.status.checkedAt)
             detail: root.count > 0 ? (root.count + (root.count === 1 ? " app" : " apps")) : (root.statusError !== "" ? "Error" : "None yet")
             foreground: root.contentForeground
             fontFamily: root.contentFontFamily
