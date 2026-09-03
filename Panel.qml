@@ -17,6 +17,7 @@ Panel {
 
   property var status: Model.emptyStatus()
   property bool startupHandled: false
+  property bool showInstalled: true
   property string pendingRemove: ""
   property string pendingInstall: ""
   property int spinFrame: 0
@@ -298,10 +299,38 @@ Panel {
             wrapMode: Text.WordWrap
           }
 
-          AppSection {
+          Column {
             visible: root.status.apps.length > 0
-            title: "INSTALLED"
-            packages: root.status.apps
+            width: parent.width
+            spacing: Style.space(8)
+
+            Row {
+              width: parent.width
+              spacing: Style.space(8)
+
+              PanelSectionHeader {
+                width: parent.width - toggleInstalledButton.width - parent.spacing
+                anchors.verticalCenter: parent.verticalCenter
+                text: "INSTALLED (" + root.status.apps.length + ")"
+                foreground: root.contentForeground
+                fontFamily: root.contentFontFamily
+              }
+
+              Button {
+                id: toggleInstalledButton
+                text: root.showInstalled ? "Hide" : "Show"
+                foreground: root.contentForeground
+                fontFamily: root.contentFontFamily
+                bordered: true
+                onClicked: root.showInstalled = !root.showInstalled
+              }
+            }
+
+            AppSection {
+              visible: root.showInstalled
+              title: ""
+              packages: root.status.apps
+            }
           }
 
           Row {
@@ -391,6 +420,7 @@ Panel {
     spacing: Style.space(8)
 
     PanelSectionHeader {
+      visible: title !== ""
       text: title
       foreground: root.contentForeground
       fontFamily: root.contentFontFamily
