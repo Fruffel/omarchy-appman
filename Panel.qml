@@ -296,7 +296,7 @@ Panel {
                 }
 
                 Button {
-                  text: "Integrate file"
+                  text: "Install"
                   foreground: root.contentForeground
                   fontFamily: root.contentFontFamily
                   bordered: true
