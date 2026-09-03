@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "fruffel.appman",
+  "name": "AppMan",
+  "version": "1.0.0",
+  "author": "Jeroen",
+  "license": "MIT",
+  "description": "Track AppMan apps from the bar, update them in one click, and install AppImages from the database, a GitHub repo, a local file, or a download URL.",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": {
+    "displayName": "AppMan",
+    "description": "Shows installed AppMan apps, updates them, and installs new AppImages",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "center",
+    "defaults": {
+      "pollMinutes": 30,
+      "upgradeOnStart": true,
+      "showWhenCurrent": true
+    },
+    "schema": [
+      {
+        "key": "pollMinutes",
+        "type": "integer",
+        "label": "Poll interval (minutes)",
+        "min": 15,
+        "max": 1440,
+        "step": 15,
+        "defaultValue": 30
+      },
+      {
+        "key": "upgradeOnStart",
+        "type": "boolean",
+        "label": "Upgrade when the shell starts",
+        "defaultValue": true
+      },
+      {
+        "key": "showWhenCurrent",
+        "type": "boolean",
+        "label": "Show icon when there is nothing to do",
+        "defaultValue": true
+      }
+    ]
+  }
+}

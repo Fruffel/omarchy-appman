@@ -1,0 +1,97 @@
+#!/bin/bash
+# Update all AppMan apps. Runs interactively in a terminal by default;
+# --quiet answers prompts automatically for the post-boot hook.
+set -euo pipefail
+
+# shellcheck source=lib.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+
+quiet=0
+notify=0
+while (($# > 0)); do
+  case "$1" in
+  --quiet) quiet=1 ;;
+  --notify) notify=1 ;;
+  --help | -h)
+    echo "Usage: appman-upgrade [--quiet] [--notify]"
+    exit 0
+    ;;
+  *)
+    echo "Unknown option: $1" >&2
+    exit 2
+    ;;
+  esac
+  shift
+done
+
+notify_send() {
+  local headline=$1
+  local body=${2:-}
+  if command -v omarchy-notification-send >/dev/null 2>&1; then
+    omarchy-notification-send -g 󰠮 --app-name AppMan "$headline" "$body"
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -a AppMan "$headline" "$body"
+  fi
+}
+
+if ! appman_ready; then
+  fail_state "AppMan is not installed"
+  ((notify == 1 || quiet == 1)) && notify_send "AppMan" "AppMan is not installed"
+  exit 1
+fi
+
+if ! wait_lock; then
+  fail_state "Timed out waiting for another AppMan job to finish"
+  exit 1
+fi
+
+merge_state "$(jq -nc '{updating: true, checking: false, error: ""}')"
+
+status=0
+cleanup() {
+  local code=$?
+  if [[ $code -ne 0 ]]; then
+    merge_state "$(jq -nc --argjson checkedAt "$(now_unix)" '{updating: false, checking: false, checkedAt: $checkedAt}')"
+  fi
+}
+trap cleanup EXIT
+
+log="$(mktemp)"
+if ((quiet == 0)); then
+  echo "Updating AppMan apps…"
+fi
+
+# -y answers confirmation prompts in quiet runs only; the terminal run
+# stays interactive so nothing surprising happens without the user.
+if ((quiet == 1)); then
+  "$APPMAN" -y -u >"$log" 2>&1 || status=$?
+else
+  "$APPMAN" -u 2>&1 | tee "$log" || status=$?
+fi
+
+# The lock fd is inherited across exec, so release it before the child
+# status run takes its own non-blocking lock.
+release_lock
+"$SCRIPTS_DIR/appman-status" >/dev/null 2>&1 || true
+
+if ((status != 0)); then
+  fail_state "AppMan update failed"
+  ((notify == 1 || quiet == 1)) && notify_send "AppMan update failed" "Run appman -u by hand to see what happened."
+  exit 1
+fi
+
+if grep -qiE "nothing to do|no apps to update" "$log"; then
+  if ((quiet == 0)); then
+    echo "AppMan apps are up to date."
+  fi
+  # Already current — stay quiet on boot.
+else
+  if ((quiet == 0)); then
+    echo "AppMan update finished."
+  fi
+  if ((notify == 1 || quiet == 1)); then
+    notify_send "AppMan updated" "All apps are current."
+  fi
+fi
+
+rm -f "$log"

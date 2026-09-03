@@ -1,0 +1,31 @@
+#!/bin/bash
+# Integrate one or more local .AppImage files into the app menu
+# (the `appman --launcher /path/to.AppImage` flow).
+# Accepts dropped-in files, file-chooser picks, or plain paths.
+set -euo pipefail
+
+# shellcheck source=lib.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+
+if (($# == 0)) || [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
+  echo "Usage: appman-install-file <file.AppImage> [...]" >&2
+  exit 2
+fi
+
+if ! appman_ready; then
+  echo "AppMan is not installed" >&2
+  exit 1
+fi
+
+files=()
+for raw in "$@"; do
+  # QML drops and choosers may hand us file:// URLs.
+  path="${raw#file://}"
+  if [[ ! -f $path ]]; then
+    echo "Not a file: $raw" >&2
+    exit 1
+  fi
+  files+=("$path")
+done
+
+exec "$APPMAN" --launcher "${files[@]}"

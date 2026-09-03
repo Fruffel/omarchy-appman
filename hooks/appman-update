@@ -1,0 +1,8 @@
+#!/bin/bash
+# Run after the desktop starts. Updates AppMan apps in the background.
+# Installed as a copy under ~/.config/omarchy/hooks/post-boot.d/, so the plugin
+# path is resolved from the well-known user plugin directory, not this file.
+set -euo pipefail
+
+PLUGIN_DIR="${HOME}/.config/omarchy/plugins/fruffel.appman"
+exec "$PLUGIN_DIR/scripts/appman-upgrade" --quiet --notify

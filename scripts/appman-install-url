@@ -1,0 +1,60 @@
+#!/bin/bash
+# Install an AppImage given a URL.
+# - A github.com/user/project... URL installs via `appman -e` (needs an app name).
+# - A direct .AppImage download URL is fetched to ~/Downloads, then integrated
+#   via `appman --launcher` like a local file.
+set -euo pipefail
+
+# shellcheck source=lib.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+
+url="${1:-}"
+name="${2:-}"
+
+if [[ -z $url || $url == "--help" || $url == "-h" ]]; then
+  echo "Usage: appman-install-url <url> [appname]" >&2
+  echo "  GitHub repo URL: appman-install-url https://github.com/user/project myapp" >&2
+  echo "  Direct download: appman-install-url https://example.com/app.AppImage" >&2
+  exit 2
+fi
+
+if ! appman_ready; then
+  echo "AppMan is not installed" >&2
+  exit 1
+fi
+
+# GitHub repo URL → the -e flow (AppMan tracks updates for these).
+if [[ $url =~ ^https?://(www\.)?github\.com/[^/]+/[^/]+ ]]; then
+  if [[ -z $name ]]; then
+    echo "Give this app a short name too:" >&2
+    echo "  appman-install-url $url <appname>" >&2
+    exit 2
+  fi
+  exec "$SCRIPTS_DIR/appman-install-extra" "$url" "$name"
+fi
+
+# Direct file URL → download, then integrate like a local file.
+base="$(printf '%s' "$url" | sed 's/[?#].*$//; s:.*/::')"
+if [[ -z $base ]]; then
+  base="app-$(date +%s).AppImage"
+fi
+
+dest_dir="${XDG_DOWNLOAD_DIR:-$HOME/Downloads}"
+mkdir -p "$dest_dir"
+dest="$dest_dir/$base"
+if [[ -e $dest ]]; then
+  i=1
+  while [[ -e $dest_dir/${base%.*}-$i.${base##*.} ]]; do ((i++)); done
+  dest="$dest_dir/${base%.*}-$i.${base##*.}"
+fi
+
+echo "Downloading $url …"
+if ! curl -fL --progress-bar -o "$dest" "$url"; then
+  echo "Download failed" >&2
+  rm -f "$dest"
+  exit 1
+fi
+chmod +x "$dest"
+echo "Saved to $dest"
+
+exec "$APPMAN" --launcher "$dest"

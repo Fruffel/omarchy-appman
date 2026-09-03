@@ -1,0 +1,52 @@
+#!/bin/bash
+# List installed AppMan apps and write ~/.local/state/omarchy/appman.json.
+# Local only — no network, safe to poll from the bar.
+set -euo pipefail
+
+# shellcheck source=lib.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+
+if ! appman_ready; then
+  fail_state "AppMan is not installed"
+  exit 1
+fi
+
+if ! try_lock; then
+  # Another check or upgrade is already running; surface the current file.
+  read_state
+  exit 0
+fi
+
+merge_state "$(jq -nc '{checking: true, error: ""}')"
+
+raw="$("$APPMAN" -f --byname 2>/dev/null || true)"
+# Strip ANSI colors, then keep only the "◆ name | db | version | type | size" rows.
+rows="$(printf '%s\n' "$raw" | sed 's/\x1b\[[0-9;]*m//g' | grep '^ ◆ ' || true)"
+
+apps="[]"
+if [[ -n $rows ]]; then
+  tsv="$(printf '%s\n' "$rows" | awk -F'|' '{
+    for (i = 1; i <= 5; i++) { gsub(/^ +| +$/, "", $i) }
+    sub(/^◆ +/, "", $1)
+    # Guard against malformed rows.
+    if ($1 != "") print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5
+  }')"
+  if [[ -n $tsv ]]; then
+    apps="$(printf '%s\n' "$tsv" | jq -c -R -s '
+      split("\n")
+      | map(select(length > 0) | split("\t")
+        | {name: (.[0] // ""), db: (.[1] // ""), version: (.[2] // ""), type: (.[3] // ""), size: (.[4] // "")})')"
+  fi
+fi
+
+state="$(jq -nc --argjson checkedAt "$(now_unix)" --argjson apps "$apps" '{
+  ok: true,
+  checkedAt: $checkedAt,
+  checking: false,
+  updating: false,
+  error: "",
+  apps: $apps
+}')"
+
+write_state_file "$state"
+printf '%s\n' "$state"

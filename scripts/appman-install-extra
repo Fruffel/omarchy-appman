@@ -1,0 +1,37 @@
+#!/bin/bash
+# Install an AppImage from a GitHub repo outside the AppMan database
+# (the `appman -e user/project APPNAME [KEYWORD]` flow).
+# Meant to run in a terminal so progress and prompts are visible.
+set -euo pipefail
+
+# shellcheck source=lib.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+
+if (($# < 2)) || [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
+  echo "Usage: appman-install-extra <user/project|github-url> <appname> [keyword]" >&2
+  echo "Example: appman-install-extra Selene-Apps/file-analyzer file-analyzer" >&2
+  exit 2
+fi
+
+repo="$1"
+name="$2"
+keyword="${3:-}"
+
+# Accept a pasted https://github.com/user/project... URL as well.
+repo="${repo#https://github.com/}"
+repo="${repo#http://github.com/}"
+repo="${repo#www.github.com/}"
+repo="${repo%/}"
+# Drop any trailing path (tree/, releases/, ...) beyond user/project.
+repo="$(printf '%s' "$repo" | cut -d/ -f1-2)"
+
+if ! appman_ready; then
+  echo "AppMan is not installed" >&2
+  exit 1
+fi
+
+if [[ -n $keyword ]]; then
+  exec "$APPMAN" -e "$repo" "$name" "$keyword"
+else
+  exec "$APPMAN" -e "$repo" "$name"
+fi

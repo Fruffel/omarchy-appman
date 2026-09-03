@@ -1,0 +1,54 @@
+#!/bin/bash
+# One-time setup: install the post-boot hook and enable the bar widget.
+set -euo pipefail
+
+PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib.sh
+source "$PLUGIN_DIR/scripts/lib.sh"
+
+chmod 755 \
+  "$PLUGIN_DIR/scripts/appman-status" \
+  "$PLUGIN_DIR/scripts/appman-upgrade" \
+  "$PLUGIN_DIR/scripts/appman-install-db" \
+  "$PLUGIN_DIR/scripts/appman-install-extra" \
+  "$PLUGIN_DIR/scripts/appman-install-file" \
+  "$PLUGIN_DIR/scripts/appman-install-url" \
+  "$PLUGIN_DIR/scripts/setup" \
+  "$PLUGIN_DIR/hooks/appman-update"
+
+if ! appman_ready; then
+  echo "AppMan is not installed (expected an 'appman' on PATH)." >&2
+  echo "Install it first: https://github.com/ivan-hc/AM" >&2
+  exit 1
+fi
+
+echo "AppMan: $APPMAN"
+echo "Apps live in: $APPSPATH"
+
+if command -v omarchy >/dev/null 2>&1; then
+  omarchy hook install post-boot "$PLUGIN_DIR/hooks/appman-update"
+else
+  hook_dir="$HOME/.config/omarchy/hooks/post-boot.d"
+  mkdir -p "$hook_dir"
+  cp "$PLUGIN_DIR/hooks/appman-update" "$hook_dir/appman-update"
+  chmod 755 "$hook_dir/appman-update"
+  echo "Installed post-boot hook: $hook_dir/appman-update"
+fi
+
+if command -v omarchy-shell >/dev/null 2>&1; then
+  omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+fi
+
+if command -v omarchy >/dev/null 2>&1; then
+  if omarchy plugin list --json 2>/dev/null | jq -e --arg id "fruffel.appman" '.[] | select(.id == $id)' >/dev/null; then
+    omarchy plugin enable fruffel.appman --section center --after fruffel.brew-update 2>/dev/null \
+      || omarchy plugin enable fruffel.appman --section center || true
+  fi
+fi
+
+echo
+echo "Setup complete."
+echo "  • Bar widget: fruffel.appman"
+echo "  • Boot hook:  post-boot (quiet AppMan upgrade)"
+echo "  • Check now:  $PLUGIN_DIR/scripts/appman-status"
+echo "  • Upgrade:    $PLUGIN_DIR/scripts/appman-upgrade"

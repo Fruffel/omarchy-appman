@@ -1,0 +1,35 @@
+#!/bin/bash
+# Install one or more programs from the AppMan database.
+# Meant to run in a terminal so progress and prompts are visible.
+set -euo pipefail
+
+# shellcheck source=lib.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
+
+flags=()
+programs=()
+while (($# > 0)); do
+  case "$1" in
+  --force-latest | --icons | --debug) flags+=("$1") ;;
+  --help | -h)
+    echo "Usage: appman-install-db [--force-latest] [--icons] [--debug] <program> [...]"
+    echo "Example: appman-install-db firefox"
+    exit 0
+    ;;
+  --*) echo "Unknown option: $1" >&2; exit 2 ;;
+  *) programs+=("$1") ;;
+  esac
+  shift
+done
+
+if ((${#programs[@]} == 0)); then
+  echo "Usage: appman-install-db <program> [...]" >&2
+  exit 2
+fi
+
+if ! appman_ready; then
+  echo "AppMan is not installed" >&2
+  exit 1
+fi
+
+exec "$APPMAN" -i "${flags[@]}" "${programs[@]}"
