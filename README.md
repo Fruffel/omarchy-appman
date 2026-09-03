@@ -17,12 +17,12 @@ at boot.
 
 - Left click opens the panel, Escape closes it.
 - Middle click upgrades immediately, right click refreshes the list.
-- **Update all** upgrades everything (`appman -u`, including AppMan's own
-  self-sync) in a floating terminal.
+- **Update all** upgrades everything headlessly (`appman -u`, including
+  AppMan's own self-sync) and notifies when done. The icon spins meanwhile.
 - **Install**: type a path, hit **Browse…**, or drop an `.AppImage` onto the
-  section. It runs `appman --launcher` on the file, which registers it in
-  the app menu.
-- **Remove** next to an app uninstalls it without asking (`appman -R`).
+  section. It runs `appman --launcher` headlessly and notifies on success.
+- **Remove** next to an app asks "Sure?" once, then uninstalls headlessly
+  (`appman -R`) and notifies.
 
 ## Dependencies
 

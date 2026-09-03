@@ -17,10 +17,15 @@ Panel {
 
   property var status: Model.emptyStatus()
   property bool startupHandled: false
+  property string pendingRemove: ""
+  property string pendingInstall: ""
 
   readonly property int count: Model.appCount(status)
   readonly property bool checking: status.checking === true || statusProc.running
   readonly property bool updating: status.updating === true || quietUpgradeProc.running
+  readonly property bool installing: installProc.running
+  readonly property bool removing: removeProc.running
+  readonly property bool busy: checking || updating || installing || removing
   readonly property string statusError: String(status.error || "")
   readonly property bool upgradeOnStart: setting("upgradeOnStart", true) !== false
   readonly property int pollMinutes: {
@@ -63,15 +68,10 @@ Panel {
     quietUpgradeProc.running = true
   }
 
-  function runInTerminal(args) {
-    if (!root.bar) return
-    var quoted = []
-    for (var i = 0; i < args.length; i++) quoted.push(Util.shellQuote(String(args[i])))
-    root.bar.run("omarchy-launch-floating-terminal-with-presentation " + quoted.join(" "))
-  }
-
   function runUpgrade() {
-    runInTerminal([root.upgradeScript])
+    if (quietUpgradeProc.running) return
+    quietUpgradeProc.command = ["bash", root.upgradeScript, "--quiet", "--notify", "--report"]
+    quietUpgradeProc.running = true
   }
 
   function browseFile() {
@@ -82,14 +82,23 @@ Panel {
 
   function integrateFile() {
     var p = fileField.text.trim()
-    if (p === "") return
-    runInTerminal([root.installFileScript, p])
+    if (p === "" || installProc.running) return
+    pendingInstall = p.split("/").pop()
+    installProc.command = ["bash", root.installFileScript, p]
+    installProc.running = true
   }
 
   function removeApp(name) {
     var n = String(name || "").trim()
-    if (n === "") return
-    runInTerminal(["appman", "-R", n])
+    if (n === "" || removeProc.running) return
+    pendingRemove = n
+    removeProc.command = ["appman", "-R", n]
+    removeProc.running = true
+  }
+
+  function notify(head, body) {
+    notifyProc.command = ["omarchy-notification-send", "-g", Model.icon(), "--app-name", "AppMan", String(head || ""), String(body || "")]
+    notifyProc.running = true
   }
 
   function handleStartup() {
@@ -133,6 +142,41 @@ Panel {
     onExited: function() {
       stateFile.reload()
     }
+  }
+
+  Process {
+    id: installProc
+    stdout: StdioCollector { waitForEnd: true }
+    stderr: StdioCollector { waitForEnd: true }
+    onExited: function(exitCode) {
+      var label = root.pendingInstall !== "" ? root.pendingInstall : "App"
+      root.pendingInstall = ""
+      if (exitCode === 0) {
+        fileField.text = ""
+        root.notify(label + " installed", "It is now in the app menu.")
+      } else {
+        root.notify(label + " failed to install", "Run appman --launcher by hand to see why.")
+      }
+      root.refresh()
+    }
+  }
+
+  Process {
+    id: removeProc
+    stdout: StdioCollector { waitForEnd: true }
+    stderr: StdioCollector { waitForEnd: true }
+    onExited: function(exitCode) {
+      var label = root.pendingRemove !== "" ? root.pendingRemove : "App"
+      root.pendingRemove = ""
+      if (exitCode === 0) root.notify(label + " removed", "")
+      else root.notify(label + " could not be removed", "Run appman -R by hand to see why.")
+      root.refresh()
+    }
+  }
+
+  Process {
+    id: notifyProc
+    stdout: StdioCollector { waitForEnd: true }
   }
 
   Process {
@@ -260,7 +304,7 @@ Panel {
               foreground: root.contentForeground
               fontFamily: root.contentFontFamily
               bordered: true
-              enabled: root.count > 0 && !root.updating
+              enabled: root.count > 0 && !root.busy
               onClicked: root.runUpgrade()
             }
           }
@@ -303,11 +347,11 @@ Panel {
                 }
 
                 Button {
-                  text: "Install"
+                  text: root.installing ? "…" : "Install"
                   foreground: root.contentForeground
                   fontFamily: root.contentFontFamily
                   bordered: true
-                  enabled: fileField.text.trim() !== ""
+                  enabled: fileField.text.trim() !== "" && !root.busy
                   onClicked: root.integrateFile()
                 }
               }
@@ -390,7 +434,7 @@ Panel {
             foreground: appRow.armed ? root.contentUrgent : root.contentForeground
             fontFamily: root.contentFontFamily
             bordered: true
-            enabled: !root.updating
+            enabled: !root.busy
             onClicked: {
               if (appRow.armed) {
                 appRow.armed = false

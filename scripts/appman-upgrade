@@ -8,12 +8,14 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 quiet=0
 notify=0
+report=0
 while (($# > 0)); do
   case "$1" in
   --quiet) quiet=1 ;;
   --notify) notify=1 ;;
+  --report) report=1 ;;
   --help | -h)
-    echo "Usage: appman-upgrade [--quiet] [--notify]"
+    echo "Usage: appman-upgrade [--quiet] [--notify] [--report]"
     exit 0
     ;;
   *)
@@ -85,7 +87,10 @@ if grep -qiE "nothing to do|no apps to update" "$log"; then
   if ((quiet == 0)); then
     echo "AppMan apps are up to date."
   fi
-  # Already current — stay quiet on boot.
+  if ((report == 1)); then
+    notify_send "AppMan apps are up to date." ""
+  fi
+  # Already current — stay quiet on boot (no --report there).
 else
   if ((quiet == 0)); then
     echo "AppMan update finished."
