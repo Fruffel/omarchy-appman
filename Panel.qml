@@ -86,6 +86,12 @@ Panel {
     runInTerminal([root.installFileScript, p])
   }
 
+  function removeApp(name) {
+    var n = String(name || "").trim()
+    if (n === "") return
+    runInTerminal(["appman", "-r", n])
+  }
+
   function handleStartup() {
     if (root.startupHandled) return
     root.startupHandled = true
@@ -347,7 +353,9 @@ Panel {
           spacing: Style.space(8)
 
           Text {
-            width: Math.max(80, parent.width * 0.42)
+            id: nameText
+            width: Math.max(60, parent.width * 0.32)
+            anchors.verticalCenter: parent.verticalCenter
             text: String(modelData.name || "")
             color: root.contentForeground
             font.family: root.contentFontFamily
@@ -356,13 +364,24 @@ Panel {
           }
 
           Text {
-            width: Math.max(80, parent.width - parent.children[0].width - Style.space(8))
+            width: Math.max(60, parent.width - nameText.width - removeButton.width - 2 * Style.space(8))
+            anchors.verticalCenter: parent.verticalCenter
             text: Model.describe(modelData)
             color: root.contentDim
             font.family: root.contentFontFamily
             font.pixelSize: Style.font.bodySmall
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignRight
+          }
+
+          Button {
+            id: removeButton
+            text: "Remove"
+            foreground: root.contentForeground
+            fontFamily: root.contentFontFamily
+            bordered: true
+            enabled: !root.updating
+            onClicked: root.removeApp(modelData.name)
           }
         }
       }
