@@ -60,34 +60,3 @@ function describe(app) {
   if (version && db) return version + " • " + db
   return version || db
 }
-
-// Parse `appman -q` output into [{name, description, flag}].
-// Continuation lines (wrapped descriptions) are folded into the entry.
-// Entries that say "use the --foo flag" install via `appman -i name.foo`.
-function parseSearch(raw) {
-  var out = []
-  var current = null
-  var lines = String(raw || "").split("\n")
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i].replace(/\x1b\[[0-9;]*m/g, "")
-    var head = line.match(/^\s*◆\s*([A-Za-z0-9_.+:-]+)\s*:?\s*(.*)$/)
-    if (head) {
-      if (current) out.push(current)
-      current = { name: head[1], description: (head[2] || "").trim(), flag: "" }
-    } else if (current && line.trim() !== "") {
-      current.description += " " + line.trim()
-    }
-  }
-  if (current) out.push(current)
-  for (var j = 0; j < out.length; j++) {
-    var m = out[j].description.match(/use the --([a-z0-9]+) flag/)
-    if (m) out[j].flag = m[1]
-  }
-  return out
-}
-
-function installArg(entry) {
-  if (!entry) return ""
-  if (entry.flag) return entry.name + "." + entry.flag
-  return entry.name
-}

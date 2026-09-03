@@ -1,8 +1,8 @@
 # AppMan
 
 Bar widget for Omarchy Quattro that lists your [AppMan](https://github.com/ivan-hc/AM)
-apps, updates them in one click, and installs new AppImages four ways —
-without leaving the desktop.
+apps, updates them in one click, and integrates a local `.AppImage` via
+file picker or drag-drop — without leaving the desktop.
 
 AppMan has no cheap "check for updates" command (`appman -u` runs the
 updaters for real), so this widget lists what is installed and lets you
@@ -25,16 +25,12 @@ ln -s ~/Projects/omarchy-appman ~/.config/omarchy/plugins/fruffel.appman
 - A post-boot hook upgrades apps quietly after the desktop starts and only
   notifies when something actually changed.
 
-### Installing apps from the panel
+### Installing apps
 
-| Section | What it runs | Notes |
-| --- | --- | --- |
-| Database search | `appman -i <program>` | Searches all databases (`appman -q --all`). Third-party hits get their flag automatically (`name.soarpkg`, …). |
-| From GitHub | `appman -e user/project <name> [keyword]` | Paste `user/project` or a full `github.com` URL. Stays update-managed. |
-| AppImage file | `appman --launcher <file>` | Type a path, **Browse…**, or drag-drop an `.AppImage` onto the section. |
-| From URL | download → `appman --launcher` | Direct `.AppImage` links download to `~/Downloads` first. `github.com` URLs route to the GitHub flow (needs an app name). |
+From the panel: type a path, hit **Browse…**, or drag-drop an `.AppImage`
+onto the install section. It runs `appman --launcher` on the file.
 
-The same flows exist as scripts for the terminal:
+The other flows live in `scripts/` for the terminal:
 
 ```sh
 scripts/appman-install-db firefox

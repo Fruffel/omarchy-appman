@@ -17,9 +17,6 @@ Panel {
 
   property var status: Model.emptyStatus()
   property bool startupHandled: false
-  property var searchResults: []
-  property bool searching: false
-  property string searchError: ""
 
   readonly property int count: Model.appCount(status)
   readonly property bool checking: status.checking === true || statusProc.running
@@ -41,10 +38,7 @@ Panel {
   readonly property string pluginDir: String(Qt.resolvedUrl(".")).replace(/^file:\/\//, "").replace(/\/$/, "")
   readonly property string statusScript: pluginDir + "/scripts/appman-status"
   readonly property string upgradeScript: pluginDir + "/scripts/appman-upgrade"
-  readonly property string installDbScript: pluginDir + "/scripts/appman-install-db"
-  readonly property string installExtraScript: pluginDir + "/scripts/appman-install-extra"
   readonly property string installFileScript: pluginDir + "/scripts/appman-install-file"
-  readonly property string installUrlScript: pluginDir + "/scripts/appman-install-url"
   readonly property string statePath: Quickshell.env("HOME") + "/.local/state/omarchy/appman.json"
 
   function switchPanel(direction) {
@@ -55,17 +49,6 @@ Panel {
 
   function applyStatus(raw) {
     root.status = Model.parseStatus(raw)
-  }
-
-  function applySearch(raw) {
-    root.searching = false
-    try {
-      root.searchResults = Model.parseSearch(raw)
-      root.searchError = root.searchResults.length === 0 ? "No matches. Try another keyword." : ""
-    } catch (e) {
-      root.searchResults = []
-      root.searchError = "Search failed"
-    }
   }
 
   function refresh() {
@@ -91,21 +74,6 @@ Panel {
     runInTerminal([root.upgradeScript])
   }
 
-  function installDb(entry) {
-    var arg = Model.installArg(entry)
-    if (!arg) return
-    runInTerminal([root.installDbScript, arg])
-  }
-
-  function doSearch() {
-    var q = queryField.text.trim()
-    if (q === "" || searchProc.running) return
-    root.searching = true
-    root.searchError = ""
-    searchProc.command = ["appman", "-q", "--all", q]
-    searchProc.running = true
-  }
-
   function browseFile() {
     if (browseProc.running) return
     browseProc.command = ["omarchy", "file", "select", "--title", "Pick an AppImage", "--extensions", "AppImage appimage"]
@@ -116,25 +84,6 @@ Panel {
     var p = fileField.text.trim()
     if (p === "") return
     runInTerminal([root.installFileScript, p])
-  }
-
-  function installExtra() {
-    var repo = extraRepoField.text.trim()
-    var name = extraNameField.text.trim()
-    var keyword = extraKeywordField.text.trim()
-    if (repo === "" || name === "") return
-    var args = [root.installExtraScript, repo, name]
-    if (keyword !== "") args.push(keyword)
-    runInTerminal(args)
-  }
-
-  function installUrl() {
-    var url = urlField.text.trim()
-    var name = urlNameField.text.trim()
-    if (url === "") return
-    var args = [root.installUrlScript, url]
-    if (name !== "") args.push(name)
-    runInTerminal(args)
   }
 
   function handleStartup() {
@@ -177,20 +126,6 @@ Panel {
     stdout: StdioCollector { waitForEnd: true }
     onExited: function() {
       stateFile.reload()
-    }
-  }
-
-  Process {
-    id: searchProc
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.applySearch(text)
-    }
-    onExited: function(exitCode) {
-      if (exitCode !== 0) {
-        root.searching = false
-        root.searchError = "Search failed"
-      }
     }
   }
 
@@ -295,7 +230,7 @@ Panel {
           Text {
             visible: root.statusError === "" && root.count === 0 && !root.checking && !root.updating
             width: parent.width
-            text: "No AppMan apps installed yet. Search below to add one."
+            text: "No AppMan apps installed yet. Drop an .AppImage below to add one."
             color: root.contentDim
             font.family: root.contentFontFamily
             font.pixelSize: Style.font.body
@@ -324,150 +259,7 @@ Panel {
           }
 
           PanelSectionHeader {
-            text: "INSTALL FROM DATABASE"
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
-          }
-
-          Row {
-            width: parent.width
-            spacing: Style.space(8)
-
-            TextField {
-              id: queryField
-              width: parent.width - searchButton.width - parent.spacing
-              placeholderText: "Search AppMan database…"
-              color: root.contentForeground
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.body
-              onAccepted: root.doSearch()
-            }
-
-            Button {
-              id: searchButton
-              text: root.searching ? "…" : "Search"
-              foreground: root.contentForeground
-              fontFamily: root.contentFontFamily
-              bordered: true
-              enabled: queryField.text.trim() !== "" && !root.searching
-              onClicked: root.doSearch()
-            }
-          }
-
-          Text {
-            visible: root.searchError !== ""
-            width: parent.width
-            text: root.searchError
-            color: root.contentDim
-            font.family: root.contentFontFamily
-            font.pixelSize: Style.font.bodySmall
-            wrapMode: Text.WordWrap
-          }
-
-          Repeater {
-            model: root.searchResults
-
-            delegate: Item {
-              required property var modelData
-              required property int index
-              visible: index < 8
-              width: parent ? parent.width : 0
-              implicitHeight: entryCol.implicitHeight
-              height: visible ? implicitHeight : 0
-
-              Column {
-                id: entryCol
-                width: parent.width
-                spacing: Style.space(2)
-
-                Row {
-                  width: parent.width
-                  spacing: Style.space(8)
-
-                  Text {
-                    width: parent.width - installButton.width - parent.spacing
-                    text: String(modelData.name || "") + (modelData.flag ? "  •  --" + modelData.flag : "")
-                    color: root.contentForeground
-                    font.family: root.contentFontFamily
-                    font.pixelSize: Style.font.body
-                    elide: Text.ElideRight
-                  }
-
-                  Button {
-                    id: installButton
-                    text: "Install"
-                    foreground: root.contentForeground
-                    fontFamily: root.contentFontFamily
-                    bordered: true
-                    onClicked: root.installDb(modelData)
-                  }
-                }
-
-                Text {
-                  visible: String(modelData.description || "") !== ""
-                  width: parent.width
-                  text: String(modelData.description || "")
-                  color: root.contentDim
-                  font.family: root.contentFontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  wrapMode: Text.WordWrap
-                  maximumLineCount: 2
-                  elide: Text.ElideRight
-                }
-              }
-            }
-          }
-
-          PanelSectionHeader {
-            text: "INSTALL FROM GITHUB"
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
-          }
-
-          Column {
-            width: parent.width
-            spacing: Style.space(6)
-
-            TextField {
-              id: extraRepoField
-              width: parent.width
-              placeholderText: "user/project or github.com URL"
-              color: root.contentForeground
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.body
-            }
-
-            TextField {
-              id: extraNameField
-              width: parent.width
-              placeholderText: "App name (short, for the CLI)"
-              color: root.contentForeground
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.body
-            }
-
-            TextField {
-              id: extraKeywordField
-              width: parent.width
-              placeholderText: "Keyword (optional, when several AppImages match)"
-              color: root.contentForeground
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.body
-              onAccepted: root.installExtra()
-            }
-
-            Button {
-              text: "Install from GitHub"
-              foreground: root.contentForeground
-              fontFamily: root.contentFontFamily
-              bordered: true
-              enabled: extraRepoField.text.trim() !== "" && extraNameField.text.trim() !== ""
-              onClicked: root.installExtra()
-            }
-          }
-
-          PanelSectionHeader {
-            text: "INSTALL APPIMAGE FILE"
+            text: "INSTALL"
             foreground: root.contentForeground
             fontFamily: root.contentFontFamily
           }
@@ -523,54 +315,6 @@ Panel {
             }
           }
 
-          PanelSectionHeader {
-            text: "INSTALL FROM URL"
-            foreground: root.contentForeground
-            fontFamily: root.contentFontFamily
-          }
-
-          Column {
-            width: parent.width
-            spacing: Style.space(6)
-
-            TextField {
-              id: urlField
-              width: parent.width
-              placeholderText: "https://… .AppImage link or github.com repo"
-              color: root.contentForeground
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.body
-              inputMethodHints: Qt.ImhUrlCharactersOnly
-            }
-
-            TextField {
-              id: urlNameField
-              width: parent.width
-              placeholderText: "App name (required for github.com repos)"
-              color: root.contentForeground
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.body
-              onAccepted: root.installUrl()
-            }
-
-            Button {
-              text: "Download & integrate"
-              foreground: root.contentForeground
-              fontFamily: root.contentFontFamily
-              bordered: true
-              enabled: urlField.text.trim() !== ""
-              onClicked: root.installUrl()
-            }
-
-            Text {
-              width: parent.width
-              text: "Direct .AppImage links land in ~/Downloads, then join the app menu. GitHub repos stay update-managed like the rest."
-              color: root.contentDim
-              font.family: root.contentFontFamily
-              font.pixelSize: Style.font.bodySmall
-              wrapMode: Text.WordWrap
-            }
-          }
         }
       }
     }
