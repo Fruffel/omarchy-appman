@@ -87,7 +87,7 @@ BarWidget {
     text: "󰠮"
     slotSize: Style.bar.statusSlot
     fontSize: Style.font.caption
-    active: root.count > 0 || root.statusError !== ""
+    active: root.statusError !== "" || root.updating || root.checking
     tooltipText: {
       if (root.statusError !== "") return root.statusError
       if (root.updating) return "Updating AppMan apps…"

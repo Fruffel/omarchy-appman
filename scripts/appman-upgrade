@@ -63,10 +63,12 @@ fi
 
 # -y answers confirmation prompts in quiet runs only; the terminal run
 # stays interactive so nothing surprising happens without the user.
+# --apps updates the installed packages without touching AppMan itself
+# (bare `-u` also runs a self-sync, which is `appman -s` territory).
 if ((quiet == 1)); then
-  "$APPMAN" -y -u >"$log" 2>&1 || status=$?
+  "$APPMAN" -y -u --apps >"$log" 2>&1 || status=$?
 else
-  "$APPMAN" -u 2>&1 | tee "$log" || status=$?
+  "$APPMAN" -u --apps 2>&1 | tee "$log" || status=$?
 fi
 
 # The lock fd is inherited across exec, so release it before the child
