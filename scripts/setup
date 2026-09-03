@@ -50,5 +50,5 @@ echo
 echo "Setup complete."
 echo "  • Bar widget: fruffel.appman"
 echo "  • Boot hook:  post-boot (quiet AppMan upgrade)"
-echo "  • Check now:  $PLUGIN_DIR/scripts/appman-status"
+echo "  • Refresh list: $PLUGIN_DIR/scripts/appman-status"
 echo "  • Upgrade:    $PLUGIN_DIR/scripts/appman-upgrade"

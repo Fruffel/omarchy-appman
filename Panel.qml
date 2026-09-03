@@ -321,15 +321,6 @@ Panel {
               enabled: root.count > 0 && !root.updating
               onClicked: root.runUpgrade()
             }
-
-            Button {
-              text: "Check now"
-              foreground: root.contentForeground
-              fontFamily: root.contentFontFamily
-              bordered: true
-              enabled: !root.checking && !root.updating
-              onClicked: root.refresh()
-            }
           }
 
           PanelSectionHeader {
