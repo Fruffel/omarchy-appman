@@ -289,7 +289,7 @@ Panel {
           }
 
           Text {
-            visible: root.statusError === "" && root.count === 0 && !root.checking && !root.updating
+            visible: root.statusError === "" && root.count === 0 && !root.updating
             width: parent.width
             text: "No AppMan apps installed yet. Drop an .AppImage below to add one."
             color: root.contentDim
