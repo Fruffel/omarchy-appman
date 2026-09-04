@@ -17,7 +17,8 @@
     "defaults": {
       "pollMinutes": 30,
       "upgradeOnStart": true,
-      "showWhenCurrent": true
+      "showWhenCurrent": true,
+      "notifications": false
     },
     "schema": [
       {
@@ -40,6 +41,12 @@
         "type": "boolean",
         "label": "Show icon when there is nothing to do",
         "defaultValue": true
+      },
+      {
+        "key": "notifications",
+        "type": "boolean",
+        "label": "Send desktop notifications",
+        "defaultValue": false
       }
     ]
   }

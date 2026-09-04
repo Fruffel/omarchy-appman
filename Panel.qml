@@ -26,6 +26,7 @@ Panel {
   readonly property int count: Model.appCount(status)
   readonly property bool checking: status.checking === true || statusProc.running
   readonly property bool updating: status.updating === true || quietUpgradeProc.running
+  readonly property bool notificationsEnabled: setting("notifications", false) === true
   readonly property bool installing: installProc.running
   readonly property bool removing: removeProc.running
   readonly property bool busy: checking || updating || installing || removing
@@ -100,6 +101,7 @@ Panel {
   }
 
   function notify(head, body) {
+    if (!root.notificationsEnabled) return
     notifyProc.command = ["omarchy-notification-send", "-g", Model.icon(), "--app-name", "AppMan", String(head || ""), String(body || "")]
     notifyProc.running = true
   }

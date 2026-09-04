@@ -48,6 +48,7 @@ Values live on the bar entry in `~/.config/omarchy/shell.json`:
 | `pollMinutes` | `30` | How often to refresh the installed list (local only, no network) |
 | `upgradeOnStart` | `true` | Quiet upgrade ~45s after the shell starts |
 | `showWhenCurrent` | `true` | Keep the icon visible when there is nothing to do |
+| `notifications` | `false` | Send desktop notifications (`omarchy bar set fruffel.appman notifications true` to opt in) |
 
 ```sh
 omarchy bar set fruffel.appman pollMinutes 60
